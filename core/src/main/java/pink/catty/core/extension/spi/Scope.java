@@ -12,17 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package pink.catty.core.extension.spi;
 
-import pink.catty.core.invoker.Consumer;
-import pink.catty.core.invoker.Provider;
-import pink.catty.core.meta.ConsumerMeta;
-import pink.catty.core.meta.ProviderMeta;
+public enum Scope {
 
-public interface InvokerChainBuilder {
+    SINGLETON,
 
-  Consumer buildConsumer(ConsumerMeta metaInfo);
-
-  Provider buildProvider(ProviderMeta metaInfo);
-
+    PROTOTYPE
 }

@@ -14,8 +14,6 @@
  */
 package pink.catty.config;
 
-import java.util.HashMap;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pink.catty.core.Constants;
@@ -24,7 +22,7 @@ import pink.catty.core.config.RegistryConfig;
 import pink.catty.core.extension.ExtensionFactory;
 import pink.catty.core.extension.ExtensionType.InvokerBuilderType;
 import pink.catty.core.extension.spi.EndpointFactory;
-import pink.catty.core.extension.spi.InvokerChainBuilder;
+import pink.catty.core.extension.spi.Protocol;
 import pink.catty.core.extension.spi.Registry;
 import pink.catty.core.invoker.Provider;
 import pink.catty.core.invoker.endpoint.Server;
@@ -33,6 +31,9 @@ import pink.catty.core.meta.ServerMeta;
 import pink.catty.core.service.HeartBeatService;
 import pink.catty.core.service.HeartBeatServiceImpl;
 import pink.catty.core.service.ServiceModel;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class Exporter {
@@ -71,7 +72,7 @@ public class Exporter {
     this.protocolConfig = protocolConfig;
   }
 
-  public <T> void registerService(Class<T> interfaceClass, T serviceObject) {
+  public <T> Exporter registerService(Class<T> interfaceClass, T serviceObject) {
     ServerAddress address = serverConfig.getServerAddress();
 
     ServiceModel<T> serviceModel = ServiceModel.parse(interfaceClass);
@@ -86,16 +87,17 @@ public class Exporter {
     metaInfo.setServiceModel(serviceModel);
     metaInfo.setWorkerThreadNum(serverConfig.getWorkerThreadNum());
 
-    InvokerChainBuilder chainBuilder = ExtensionFactory.getInvokerBuilder()
-        .getExtensionSingleton(InvokerBuilderType.DIRECT);
+    Protocol chainBuilder = ExtensionFactory.getProtocol()
+        .getExtension(InvokerBuilderType.DIRECT);
     Provider provider = chainBuilder.buildProvider(metaInfo);
     serviceHandlers.put(serviceModel.getServiceName(), provider);
+    return this;
   }
 
   public void export() {
     if (registry == null && registryConfig != null) {
       registry = ExtensionFactory.getRegistry()
-          .getExtensionSingleton(registryConfig.getRegistryType(), registryConfig);
+          .getExtension(registryConfig.getRegistryType());
       registry.open();
     }
     ServerAddress address = serverConfig.getServerAddress();
@@ -108,8 +110,8 @@ public class Exporter {
     serverMeta.setWorkerThreadNum(serverConfig.getWorkerThreadNum());
 
     EndpointFactory factory = ExtensionFactory.getEndpointFactory()
-        .getExtensionSingleton(protocolConfig.getEndpointType());
-    server = factory.createServer(serverMeta);
+        .getExtension(protocolConfig.getEndpointType());
+    server = factory.getServer(serverMeta);
     if (server == null) {
       throw new NullPointerException("Server is not exist");
     }

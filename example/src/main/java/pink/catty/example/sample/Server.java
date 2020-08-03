@@ -12,20 +12,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package pink.catty.core.extension.spi;
+package pink.catty.example.sample;
 
-import pink.catty.core.CodecException;
+import pink.catty.config.CattyBootstrap;
+import pink.catty.example.IService;
+import pink.catty.example.IServiceImpl;
 
-@SPI
-public interface Codec<I, O> extends PackageReader<I, O> {
+public class Server {
 
-  byte[] encode(Object message, DataTypeEnum dataTypeEnum) throws CodecException;
-
-  Object decode(byte[] data, DataTypeEnum dataTypeEnum) throws CodecException;
-
-  enum DataTypeEnum {
-    REQUEST,
-    RESPONSE,
-    ;
+  public static void main(String[] args) {
+    CattyBootstrap.provider()
+            .port(20550)
+            .getExporter()
+            .registerService(IService.class, new IServiceImpl())
+            .export();
   }
 }

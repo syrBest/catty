@@ -33,7 +33,7 @@ public abstract class AbstractEndpointFactory implements EndpointFactory {
   private static final Map<Integer, Server> serverCache = new ConcurrentHashMap<>();
 
   @Override
-  public Client createClient(ClientMeta clientMeta) {
+  public Client getClient(ClientMeta clientMeta) {
     ServerAddress address = new ServerAddress(clientMeta.getRemoteIp(), clientMeta.getRemotePort());
     Client client = clientCache.get(address);
     if(client != null && client.isClosed()) {
@@ -43,7 +43,7 @@ public abstract class AbstractEndpointFactory implements EndpointFactory {
     if (client == null) {
       synchronized (clientCache) {
         if (!clientCache.containsKey(address)) {
-          Codec codec = ExtensionFactory.getCodec().getExtensionSingleton(clientMeta.getCodec());
+          Codec codec = ExtensionFactory.getCodec().getExtension(clientMeta.getCodec());
           client = doCreateClient(clientMeta, codec);
           client.open();
           clientCache.put(address, client);
@@ -56,7 +56,7 @@ public abstract class AbstractEndpointFactory implements EndpointFactory {
   }
 
   @Override
-  public Server createServer(ServerMeta serverMeta) {
+  public Server getServer(ServerMeta serverMeta) {
     int port = serverMeta.getLocalPort();
     Server server = serverCache.get(port);
     if(server != null && server.isClosed()) {
@@ -66,7 +66,7 @@ public abstract class AbstractEndpointFactory implements EndpointFactory {
     if (server == null) {
       synchronized (serverCache) {
         if (!serverCache.containsKey(port)) {
-          Codec codec = ExtensionFactory.getCodec().getExtensionSingleton(serverMeta.getCodec());
+          Codec codec = ExtensionFactory.getCodec().getExtension(serverMeta.getCodec());
           server = doCreateServer(serverMeta, codec);
           server.open();
           serverCache.put(port, server);

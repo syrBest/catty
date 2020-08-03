@@ -19,10 +19,19 @@ import pink.catty.core.invoker.endpoint.Server;
 import pink.catty.core.meta.ClientMeta;
 import pink.catty.core.meta.ServerMeta;
 
+/**
+ * EndpointFactory creates Client & Server and cache them. Client & Server is an endpoint to
+ * communicate to remote. Different Client & Server may use different transport protocol and
+ * different framework to implement remote data transport such as TCP & Netty.
+ * <p>
+ * You could implement your own EndpointFactory for different cache strategies or remote transport
+ * protocols.
+ */
+@SPI(scope = Scope.SINGLETON)
 public interface EndpointFactory {
 
-  Client createClient(ClientMeta clientMeta);
+  Client getClient(ClientMeta clientMeta);
 
-  Server createServer(ServerMeta serverMeta);
+  Server getServer(ServerMeta serverMeta);
 
 }

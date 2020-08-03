@@ -12,13 +12,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package pink.catty.extension.builder;
+package pink.catty.extension.protocol;
 
 import pink.catty.core.extension.Extension;
 import pink.catty.core.extension.ExtensionFactory;
 import pink.catty.core.extension.ExtensionType.InvokerBuilderType;
 import pink.catty.core.extension.spi.EndpointFactory;
-import pink.catty.core.extension.spi.InvokerChainBuilder;
+import pink.catty.core.extension.spi.Protocol;
 import pink.catty.core.extension.spi.Serialization;
 import pink.catty.core.invoker.Consumer;
 import pink.catty.core.invoker.Provider;
@@ -32,16 +32,16 @@ import pink.catty.invokers.provider.ProviderInvoker;
 import pink.catty.invokers.provider.ProviderSerialization;
 
 @Extension(InvokerBuilderType.DIRECT)
-public class CattyInvokerBuilder implements InvokerChainBuilder {
+public class CattyProtocol implements Protocol {
 
   @Override
   public Consumer buildConsumer(ConsumerMeta meta) {
     EndpointFactory factory = ExtensionFactory.getEndpointFactory()
-        .getExtensionSingleton(meta.getEndpoint());
-    Client client = factory.createClient(meta);
+        .getExtension(meta.getEndpoint());
+    Client client = factory.getClient(meta);
     Serialization serialization = ExtensionFactory
         .getSerialization()
-        .getExtensionSingleton(meta.getSerialization());
+        .getExtension(meta.getSerialization());
     ConsumerClient consumerClient = new ConsumerClient(client, meta);
     Consumer serializationInvoker = new ConsumerSerialization(consumerClient, serialization);
     if (meta.getHealthCheckPeriod() <= 0) {
@@ -55,7 +55,7 @@ public class CattyInvokerBuilder implements InvokerChainBuilder {
   public Provider buildProvider(ProviderMeta meta) {
     Serialization serialization = ExtensionFactory
         .getSerialization()
-        .getExtensionSingleton(meta.getSerialization());
+        .getExtension(meta.getSerialization());
     ProviderInvoker providerInvoker = new ProviderInvoker(meta);
     return new ProviderSerialization(providerInvoker, serialization);
   }
