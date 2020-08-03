@@ -74,7 +74,7 @@ public class Exporter {
   public <T> void registerService(Class<T> interfaceClass, T serviceObject) {
     ServerAddress address = serverConfig.getServerAddress();
 
-    ServiceModel serviceModel = ServiceModel.parse(interfaceClass);
+    ServiceModel<T> serviceModel = ServiceModel.parse(interfaceClass);
     serviceModel.setTarget(serviceObject);
 
     ProviderMeta metaInfo = new ProviderMeta();

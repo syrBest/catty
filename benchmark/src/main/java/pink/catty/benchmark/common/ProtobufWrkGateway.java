@@ -32,51 +32,52 @@ import org.slf4j.LoggerFactory;
 
 public class ProtobufWrkGateway {
 
-  private Logger logger = LoggerFactory.getLogger(ProtobufWrkGateway.class);
-  private EventLoopGroup bossGroup;
-  private EventLoopGroup workerGroup;
+    private Logger logger = LoggerFactory.getLogger(ProtobufWrkGateway.class);
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
 
-  public void start(ProtobufService service) {
-    ServerBootstrap bootstrap = new ServerBootstrap();
-    bossGroup = new NioEventLoopGroup(1);
-    workerGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2);
-    ChannelHandler handler = new ProtobufWrkHandler(service);
+    public void start(ProtobufService service) {
+        ServerBootstrap bootstrap = new ServerBootstrap();
+        bossGroup = new NioEventLoopGroup(1);
+        workerGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 2);
+        ChannelHandler handler = new ProtobufWrkHandler(service);
 
-    bootstrap.group(bossGroup, workerGroup)
-        .channel(NioServerSocketChannel.class)
-        .childHandler(
-            new ChannelInitializer<Channel>() {
-              @Override
-              protected void initChannel(Channel ch) {
-                ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast(new HttpServerCodec());
-                pipeline.addLast(new HttpObjectAggregator(0));
-                pipeline.addLast(handler);
-              }
-            })
-        .childOption(ChannelOption.TCP_NODELAY, true)
-        .childOption(ChannelOption.SO_KEEPALIVE, true);
+        bootstrap.group(bossGroup, workerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(
+                        new ChannelInitializer<Channel>() {
+                            @Override
+                            protected void initChannel(Channel ch) {
+                                ChannelPipeline pipeline = ch.pipeline();
+                                pipeline.addLast(new HttpServerCodec());
+                                pipeline.addLast(new HttpObjectAggregator(0));
+                                pipeline.addLast(handler);
+                            }
+                        })
+                .childOption(ChannelOption.TCP_NODELAY, true)
+                .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-    String host = "0.0.0.0";
-    int port = 8088;
-    try {
-      ChannelFuture f = bootstrap.bind(host, port).sync();
-      logger.info("Gateway started, host is {}, port is {}.", host, port);
-      f.channel().closeFuture().sync();
-      logger.info("Gateway proxy closed, host is {} , port is {}.", host, port);
-    } catch (InterruptedException e) {
-      logger.error("Gateway proxy start failed", e);
-    } finally {
-      destroy();
+        String host = "0.0.0.0";
+        int port = 8088;
+        try {
+            ChannelFuture f = bootstrap.bind(host, port).sync();
+            logger.info("Gateway started, host is {}, port is {}.", host, port);
+            f.channel().closeFuture().sync();
+            logger.info("Gateway proxy closed, host is {} , port is {}.", host, port);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.error("Gateway proxy start failed", e);
+        } finally {
+            destroy();
+        }
     }
-  }
 
-  public void destroy() {
-    if (workerGroup != null) {
-      workerGroup.shutdownGracefully();
+    public void destroy() {
+        if (workerGroup != null) {
+            workerGroup.shutdownGracefully();
+        }
+        if (bossGroup != null) {
+            bossGroup.shutdownGracefully();
+        }
     }
-    if (bossGroup != null) {
-      bossGroup.shutdownGracefully();
-    }
-  }
 }

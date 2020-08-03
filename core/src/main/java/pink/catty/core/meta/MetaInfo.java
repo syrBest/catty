@@ -71,7 +71,7 @@ public abstract class MetaInfo {
     return parseOf(metaString, model, null);
   }
 
-  public static <T extends MetaInfo> T parseOf(String metaString, Class<T> model,
+  public static <T extends MetaInfo>  T parseOf(String metaString, Class<T> model,
       ServiceModel serviceModel) {
     Map<String, String> map = new HashMap<>();
     String[] metaInfoEntryArray = metaString.split(";");

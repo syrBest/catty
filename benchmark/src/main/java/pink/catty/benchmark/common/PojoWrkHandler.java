@@ -58,14 +58,14 @@ public class PojoWrkHandler extends SimpleChannelInboundHandler<FullHttpRequest>
       if (content.equals(response)) {
         okResponse(ctx);
       } else {
-        badReponse(ctx);
+        badResponse(ctx);
         if (LOGGER.isInfoEnabled()) {
           LOGGER
               .info("Request result:failure cost:{} ms", System.currentTimeMillis() - start);
         }
       }
     } catch (Throwable t) {
-      badReponse(ctx);
+      badResponse(ctx);
       if (LOGGER.isInfoEnabled()) {
         LOGGER
             .info("Request result:failure cost:{} ms", System.currentTimeMillis() - start, t);
@@ -81,7 +81,7 @@ public class PojoWrkHandler extends SimpleChannelInboundHandler<FullHttpRequest>
     ctx.writeAndFlush(ok);
   }
 
-  private void badReponse(ChannelHandlerContext ctx) {
+  private void badResponse(ChannelHandlerContext ctx) {
     FullHttpResponse error =
         new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR);
     error.headers().add(HttpHeaderNames.CONTENT_LENGTH, 0);

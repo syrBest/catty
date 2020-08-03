@@ -16,6 +16,7 @@ package pink.catty.config;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pink.catty.core.ServerAddress;
@@ -37,127 +38,131 @@ import pink.catty.invokers.consumer.ConsumerHandler;
 
 public class Reference<T> {
 
-  private static final Logger logger = LoggerFactory.getLogger(Reference.class);
+    private static final Logger logger = LoggerFactory.getLogger(Reference.class);
 
-  private Cluster cluster;
+    private Cluster cluster;
 
-  private Class<T> interfaceClass;
+    private Class<T> interfaceClass;
 
-  private ClientConfig clientConfig;
+    private ClientConfig clientConfig;
 
-  private RegistryConfig registryConfig;
+    private RegistryConfig registryConfig;
 
-  private ProtocolConfig protocolConfig;
+    private ProtocolConfig protocolConfig;
 
-  private Registry registry;
+    private Registry registry;
 
-  private volatile T ref;
+    private volatile T ref;
 
-  public Reference() {
-  }
-
-  public void setClientConfig(ClientConfig clientConfig) {
-    this.clientConfig = clientConfig;
-  }
-
-  public void setRegistryConfig(RegistryConfig registryConfig) {
-    this.registryConfig = registryConfig;
-  }
-
-  public void setProtocolConfig(ProtocolConfig protocolConfig) {
-    this.protocolConfig = protocolConfig;
-  }
-
-  public void setInterfaceClass(Class<T> interfaceClass) {
-    this.interfaceClass = interfaceClass;
-  }
-
-  public Class<T> getInterfaceClass() {
-    return interfaceClass;
-  }
-
-  public T refer() {
-    if (clientConfig == null) {
-      throw new NullPointerException("ClientConfig can't be null");
+    public Reference() {
     }
-    if (ref == null) {
-      synchronized (this) {
+
+    static  class T {
+
+    }
+
+    public void setClientConfig(ClientConfig clientConfig) {
+        this.clientConfig = clientConfig;
+    }
+
+    public void setRegistryConfig(RegistryConfig registryConfig) {
+        this.registryConfig = registryConfig;
+    }
+
+    public void setProtocolConfig(ProtocolConfig protocolConfig) {
+        this.protocolConfig = protocolConfig;
+    }
+
+    public void setInterfaceClass(Class<T> interfaceClass) {
+        this.interfaceClass = interfaceClass;
+    }
+
+    public Class<T> getInterfaceClass() {
+        return interfaceClass;
+    }
+
+    public T refer() {
+        if (clientConfig == null) {
+            throw new NullPointerException("ClientConfig can't be null");
+        }
         if (ref == null) {
-          ServiceModel serviceModel = ServiceModel.parse(interfaceClass);
+            synchronized (this) {
+                if (ref == null) {
+                    ServiceModel<T> serviceModel = ServiceModel.parse(interfaceClass);
 
-          ClusterMeta clusterMeta = new ClusterMeta();
-          clusterMeta.setServiceModel(serviceModel);
-          clusterMeta.setSerialization(protocolConfig.getSerializationType());
-          clusterMeta.setCodec(protocolConfig.getCodecType());
-          clusterMeta.setEndpoint(protocolConfig.getEndpointType());
-          clusterMeta.setHealthCheckPeriod(protocolConfig.getHeartbeatPeriod());
-          clusterMeta.setLoadBalance(protocolConfig.getLoadBalanceType());
-          clusterMeta.setRetryTimes(protocolConfig.getRetryTimes());
-          clusterMeta.setRecoveryPeriod(protocolConfig.getRecoveryPeriod());
-          String metaString = clusterMeta.toString();
+                    ClusterMeta clusterMeta = new ClusterMeta();
+                    clusterMeta.setServiceModel(serviceModel);
+                    clusterMeta.setSerialization(protocolConfig.getSerializationType());
+                    clusterMeta.setCodec(protocolConfig.getCodecType());
+                    clusterMeta.setEndpoint(protocolConfig.getEndpointType());
+                    clusterMeta.setHealthCheckPeriod(protocolConfig.getHeartbeatPeriod());
+                    clusterMeta.setLoadBalance(protocolConfig.getLoadBalanceType());
+                    clusterMeta.setRetryTimes(protocolConfig.getRetryTimes());
+                    clusterMeta.setRecoveryPeriod(protocolConfig.getRecoveryPeriod());
+                    String metaString = clusterMeta.toString();
 
-          buildCluster(clusterMeta);
-          Map<String, Consumer> invokerHolderMap = new ConcurrentHashMap<>();
-          for (ServerAddress address : clientConfig.getAddresses()) {
-            ConsumerMeta newMetaInfo = MetaInfo.parseOf(metaString, ConsumerMeta.class,
-                serviceModel);
-            newMetaInfo.setRemoteIp(address.getIp());
-            newMetaInfo.setRemotePort(address.getPort());
+                    buildCluster(clusterMeta);
+                    Map<String, Consumer> invokerHolderMap = new ConcurrentHashMap<>();
+                    for (ServerAddress address : clientConfig.getAddresses()) {
+                        ConsumerMeta newMetaInfo = MetaInfo.parseOf(metaString, ConsumerMeta.class,
+                                serviceModel);
+                        newMetaInfo.setRemoteIp(address.getIp());
+                        newMetaInfo.setRemotePort(address.getPort());
 
-            InvokerChainBuilder chainBuilder = ExtensionFactory.getInvokerBuilder()
-                .getExtensionSingleton(InvokerBuilderType.DIRECT);
-            Consumer consumer = chainBuilder.buildConsumer(newMetaInfo);
-            invokerHolderMap.put(newMetaInfo.toString(), consumer);
-          }
-          cluster.setInvokerMap(invokerHolderMap);
+                        InvokerChainBuilder chainBuilder = ExtensionFactory.getInvokerBuilder()
+                                .getExtensionSingleton(InvokerBuilderType.DIRECT);
+                        Consumer consumer = chainBuilder.buildConsumer(newMetaInfo);
+                        invokerHolderMap.put(newMetaInfo.toString(), consumer);
+                    }
+                    cluster.setInvokerMap(invokerHolderMap);
 
-          ref = ConsumerHandler.getProxy(serviceModel, cluster);
+                    ref = ConsumerHandler.getProxy(serviceModel, cluster);
 
-          serviceModel.setTarget(ref);
+                    serviceModel.setTarget(ref);
+                }
+            }
         }
-      }
+        return ref;
     }
-    return ref;
-  }
 
-  private void buildCluster(ClusterMeta metaInfo) {
-    if (cluster == null) {
-      synchronized (Reference.class) {
+    private void buildCluster(ClusterMeta metaInfo) {
         if (cluster == null) {
-          String clusterStrategy = protocolConfig.getClusterType();
-          switch (clusterStrategy) {
-            case ProtocolConfig.AUTO_RECOVERY:
-              cluster = new RecoveryCluster(metaInfo);
-              break;
-            case ProtocolConfig.FAIL_FAST:
-              cluster = new FailFastCluster(metaInfo);
-              break;
-            case ProtocolConfig.FAIL_OVER:
-              cluster = new FailOverCluster(metaInfo);
-          }
+            synchronized (Reference.class) {
+                if (cluster == null) {
+                    String clusterStrategy = protocolConfig.getClusterType();
+                    switch (clusterStrategy) {
+                        case ProtocolConfig.AUTO_RECOVERY:
+                            cluster = new RecoveryCluster(metaInfo);
+                            break;
+                        case ProtocolConfig.FAIL_FAST:
+                            cluster = new FailFastCluster(metaInfo);
+                            break;
+                        case ProtocolConfig.FAIL_OVER:
+                            cluster = new FailOverCluster(metaInfo);
+                    }
+                }
+            }
         }
-      }
     }
-  }
 
-  private boolean useRegistry() {
-    if (registryConfig == null) {
-      return false;
+    private boolean useRegistry() {
+        if (registryConfig == null) {
+            return false;
+        }
+        if (registryConfig.getAddress().equals("N/A")) {
+            return false;
+        }
+        return true;
     }
-    if (registryConfig.getAddress().equals("N/A")) {
-      return false;
-    }
-    return true;
-  }
 
-  public void derefer() {
-    if (registry != null && registry.isOpen()) {
-      registry.close();
-      registry = null;
+    public void derefer() {
+        if (registry != null && registry.isOpen()) {
+            registry.close();
+            registry = null;
+        }
+        if (cluster != null) {
+            cluster.destroy();
+        }
+        logger.info("De-refer, service: {}", interfaceClass.getName());
     }
-    if (cluster != null) {
-      cluster.destroy();
-    }
-    logger.info("De-refer, service: {}", interfaceClass.getName());
-  }
 }
